@@ -54,6 +54,12 @@ class DynamicsModel:
             x = current_position
         )
         return -self.mass * self.gravity * (s / np.sqrt(1 + s**2))
+    
+    def step(self, applied_force: float) -> Tuple[float, float]:
+        self.position, self.velocity = self.update_position(
+            applied_force = applied_force
+        )
+        return self.position, self.velocity
 
 
 
