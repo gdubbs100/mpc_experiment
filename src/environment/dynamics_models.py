@@ -12,7 +12,7 @@ class DynamicsModel:
             mass: float, 
             gravity: float,
             landscape_func: Callable[[float], float],
-            time_increment = float
+            time_increment: float
         ):
         self.position = initial_position
         self.velocity = initial_velocity

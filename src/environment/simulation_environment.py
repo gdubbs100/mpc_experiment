@@ -13,7 +13,8 @@ class OneDSimulationEnv(gym.Env):
             initial_position: float = 0.0,
             initial_velocity: float = 0.0,
             max_duration: int = 500,
-            target_time_close_to_target: int = 5
+            target_time_close_to_target: int = 10,
+            distance_to_target_threshold: float = 0.1
         ):
 
         self.target_location = target_location
@@ -31,6 +32,7 @@ class OneDSimulationEnv(gym.Env):
         self.duration = 0
         self.time_close_to_target = 0
         self.target_time_close_to_target = target_time_close_to_target
+        self.distance_to_target_threshold = distance_to_target_threshold
 
         self.action_space = gym.spaces.Box(-np.inf, np.inf, shape = (1,), dtype=float)
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, shape = (2,), dtype=float)
@@ -58,7 +60,7 @@ class OneDSimulationEnv(gym.Env):
 
         ## get reward
         distance_to_target = self.calculate_distance_to_target(position = self.position)
-        reward = distance_to_target ## TODO: for now
+        reward = -distance_to_target ## TODO: for now
 
         ## truncate after finite duration
         self.duration += 1
@@ -67,14 +69,14 @@ class OneDSimulationEnv(gym.Env):
         else:
             truncated = False
 
-        ## termination - under what situation would we terminate?
-        if distance_to_target < 1.0e-6:
+        if distance_to_target < self.distance_to_target_threshold:
             if self.time_close_to_target >= self.target_time_close_to_target:
                 terminated = True
                 info['success'] = 1
             else:
                 self.time_close_to_target += 1
                 info['success'] = 0
+                terminated = False
         else:
             self.time_close_to_target = 0
             terminated = False
@@ -90,6 +92,10 @@ class OneDSimulationEnv(gym.Env):
         super().reset(seed=seed)
         self.position = self.initial_position
         self.velocity = self.initial_velocity
+        self.dynamics_model.reset(
+            initial_position=self.initial_position,
+            initial_velocity=self.initial_velocity
+        )
         observation = self.get_observation()
 
         self.time_close_to_target = 0
