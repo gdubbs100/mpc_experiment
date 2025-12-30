@@ -1,0 +1,19 @@
+[project]
+name = "mpc-experiment"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "gpytorch>=1.14.3",
+    "numpy>=2.4.0",
+    "pandas>=2.3.3",
+    "pytest>=9.0.2",
+    "seaborn>=0.13.2",
+    "torch>=2.9.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
