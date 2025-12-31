@@ -9,7 +9,7 @@ class DynamicsModel:
             initial_position: float,
             initial_velocity: float,
             resistance: float, 
-            mass: float, 
+            # mass: float, 
             gravity: float,
             landscape_func: Callable[[float], float],
             time_increment: float
@@ -17,7 +17,7 @@ class DynamicsModel:
         self.position = initial_position
         self.velocity = initial_velocity
         self.resistance = resistance
-        self.mass = mass
+        # self.mass = mass
         self.gravity = gravity
         self.landscape_func = landscape_func
         self.time_increment = time_increment
@@ -26,11 +26,13 @@ class DynamicsModel:
         self.position = initial_position
         self.velocity = initial_velocity
 
-    def update_position(self, applied_force: float) -> Tuple[float, float]:
+    ## TODO: pass previous position and velocity to update?
+    def update_position(self, applied_force: float, mass: float) -> Tuple[float, float]:
         acceleration = self.calculate_acceleration(
             applied_force = applied_force,
             current_velocity = self.velocity,
-            current_position = self.position
+            current_position = self.position,
+            mass = mass
         )
         next_velocity = self.velocity + acceleration * self.time_increment
         next_position = self.position + next_velocity * self.time_increment
@@ -40,24 +42,28 @@ class DynamicsModel:
             self, 
             applied_force: float, 
             current_velocity: float, 
-            current_position: float
+            current_position: float,
+            mass: float
         ) -> float:
         friction = self.resistance * current_velocity
         force_from_gravity = self.calculate_force_from_gravity(
-            current_position = current_position
+            current_position = current_position,
+            mass = mass
         )
-        return (force_from_gravity + applied_force - friction) / self.mass
+        return (force_from_gravity + applied_force - friction) / mass
     
-    def calculate_force_from_gravity(self, current_position: float) -> float:
+    def calculate_force_from_gravity(self, current_position: float, mass: float) -> float:
         s = numerical_grad(
             landscape_func=self.landscape_func,
             x = current_position
         )
-        return -self.mass * self.gravity * (s / np.sqrt(1 + s**2))
+        return -mass * self.gravity * (s / np.sqrt(1 + s**2))
     
-    def step(self, applied_force: float) -> Tuple[float, float]:
+    ## TODO: pass previous position and velocity to step?
+    def step(self, applied_force: float, mass: float) -> Tuple[float, float]:
         self.position, self.velocity = self.update_position(
-            applied_force = applied_force
+            applied_force = applied_force,
+            mass = mass
         )
         return self.position, self.velocity
 

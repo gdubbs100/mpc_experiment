@@ -2,6 +2,7 @@ import numpy as np
 from typing import Callable
 
 from environment.dynamics_models import DynamicsModel
+from environment.vehicle import Vehicle
 
 
 class OracleMPCCEMAgent:
@@ -14,6 +15,7 @@ class OracleMPCCEMAgent:
             self, 
             target_location: float, 
             dynamics_model: DynamicsModel,
+            vehicle: Vehicle,
             num_lookahead_steps: int, 
             num_rollouts: int, 
             cem_iters: int,
@@ -31,6 +33,7 @@ class OracleMPCCEMAgent:
         self.deterministic_actions = deterministic_actions
 
         self.dynamics_model = dynamics_model
+        self.vehicle = vehicle
 
     def act(self, state):
         mean, std = self.run_cem_mpc(initial_state=state)
@@ -56,6 +59,7 @@ class OracleMPCCEMAgent:
             self, 
             initial_position: float, 
             initial_velocity: float, 
+            remaining_fuel: float,
             actions: np.ndarray[float]
         ) -> np.ndarray:
         rollout_reward = 0.0
@@ -64,9 +68,15 @@ class OracleMPCCEMAgent:
             initial_position=initial_position,
             initial_velocity=initial_velocity
         )
+        self.vehicle.reset(fuel_mass = remaining_fuel)
         for a in actions:
-            # dynamics model tracks updates to position and velocity
-            next_position, _ = self.dynamics_model.step(applied_force = a)
+            # TODO: should the dynamics model track updates to position and velocity?
+            ## TODO: is there a better way to get time_increment?
+            applied_force = self.vehicle.generate_force(u=a, time_increment=self.dynamics_model.time_increment)
+            next_position, _ = self.dynamics_model.step(
+                applied_force = applied_force, 
+                mass = self.vehicle.mass
+            )
             next_reward = np.abs(next_position - self.target_location)
             rollout_reward += -next_reward
         return rollout_reward
@@ -78,6 +88,7 @@ class OracleMPCCEMAgent:
             rollout_reward = self.rollout(
                 initial_position = initial_state[0],
                 initial_velocity = initial_state[1],
+                remaining_fuel = initial_state[2],
                 actions = actions[i,:]
             )
             rewards[i] = rollout_reward
@@ -95,8 +106,8 @@ class OracleMPCCEMAgent:
                     scale=np.repeat(stds, self.num_rollouts)
                 )
             ).reshape(self.num_rollouts, self.num_lookahead_steps)
-            rewards = self.run_cem_iter(initial_state, actions)
-            # elite_actions = actions[rewards > np.quantile(rewards, self.cem_cutoff), :]
+            u = np.tanh(actions) # apply tanh squashing
+            rewards = self.run_cem_iter(initial_state, u)
             elite_actions = self.select_elite_actions(
                 actions = actions,
                 rewards = rewards
