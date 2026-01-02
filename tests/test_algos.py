@@ -18,8 +18,6 @@ vehicle = Vehicle(
 
 # dynamics model for test
 dynamics_model = DynamicsModel(
-    initial_position = 0.0,
-    initial_velocity = 0.0,
     resistance = 1.0,
     gravity = 1.0,
     landscape_func= lambda x: 1.0 * x, ## upwards slope
@@ -45,13 +43,4 @@ agent = OracleMPCCEMAgent(
     initial_sampling_variance=100
 )
 
-def test_dynamics_model_independence():
-    obs, _ = env.reset()
-    _ = agent.act(state=obs)
-
-    ## should be no change in dynamics model after rollout
-    env_dynamics_model_position = env.dynamics_model.position
-    env_dynamics_model_velocity = env.dynamics_model.velocity
-    check_exact_equality(env_dynamics_model_position, obs[0])
-    check_exact_equality(env_dynamics_model_velocity, obs[1])
 

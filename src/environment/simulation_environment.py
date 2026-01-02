@@ -30,10 +30,6 @@ class OneDSimulationEnv(gym.Env):
         self.initial_fuel_mass = self.vehicle.fuel_mass
 
         self.dynamics_model = dynamics_model
-        dynamics_model.reset(
-            initial_position=initial_position,
-            initial_velocity=initial_velocity
-        )
         self.max_duration = max_duration
         self.duration = 0
         self.time_close_to_target = 0
@@ -64,7 +60,9 @@ class OneDSimulationEnv(gym.Env):
         )
         self.position, self.velocity = self.dynamics_model.step(
             applied_force = applied_force,
-            mass = self.vehicle.mass
+            mass = self.vehicle.mass,
+            current_position = self.position,
+            current_velocity = self.velocity
         )
         observation = self.get_observation()
 
@@ -104,10 +102,6 @@ class OneDSimulationEnv(gym.Env):
         super().reset(seed=seed)
         self.position = self.initial_position
         self.velocity = self.initial_velocity
-        self.dynamics_model.reset(
-            initial_position=self.initial_position,
-            initial_velocity=self.initial_velocity
-        )
         self.vehicle.reset(fuel_mass = self.initial_fuel_mass)
         observation = self.get_observation()
 

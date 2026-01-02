@@ -20,8 +20,8 @@ VEHICLE = Vehicle(
     finite_fuel=True
 )
 DYNAMICS_MODEL = DynamicsModel(
-    initial_position=0.0,
-    initial_velocity=0.0,
+    # initial_position=0.0,
+    # initial_velocity=0.0,
     resistance=0.1,
     gravity=9.81,
     landscape_func=lambda x: -np.sin(x/2) - x/2 * np.cos(x-1),

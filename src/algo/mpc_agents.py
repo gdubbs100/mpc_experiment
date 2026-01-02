@@ -63,22 +63,20 @@ class OracleMPCCEMAgent:
             actions: np.ndarray[float]
         ) -> np.ndarray:
         rollout_reward = 0.0
-        ## reset the dynamics model to the initial values
-        self.dynamics_model.reset(
-            initial_position=initial_position,
-            initial_velocity=initial_velocity
-        )
+        position, velocity = initial_position, initial_velocity
         self.vehicle.reset(fuel_mass = remaining_fuel)
         for a in actions:
-            # TODO: should the dynamics model track updates to position and velocity?
             ## TODO: is there a better way to get time_increment?
             applied_force = self.vehicle.generate_force(u=a, time_increment=self.dynamics_model.time_increment)
-            next_position, _ = self.dynamics_model.step(
+            position, velocity = self.dynamics_model.step(
                 applied_force = applied_force, 
-                mass = self.vehicle.mass
+                mass = self.vehicle.mass,
+                current_position = position,
+                current_velocity = velocity
             )
-            next_reward = np.abs(next_position - self.target_location)
+            next_reward = np.abs(position - self.target_location)
             rollout_reward += -next_reward
+            
         return rollout_reward
     
     def run_cem_iter(self, initial_state, actions):
