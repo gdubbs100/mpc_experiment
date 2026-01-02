@@ -57,9 +57,10 @@ agent = OracleMPPIAgent(
     target_location=TARGET_LOCATION,
     dynamics_model=copy.deepcopy(DYNAMICS_MODEL),
     vehicle=copy.deepcopy(VEHICLE),
-    num_lookahead_steps=20,
+    num_lookahead_steps=50,
     num_rollouts = 500,
-    temperature=1.0
+    learning_iters=5,
+    temperature=0.1
 )
 
 
@@ -78,6 +79,16 @@ def main():
         actions.append(action)
         obs = next_obs
     
+    video = MotionViewer(
+        positions = np.array(positions),
+        velocities= np.array(velocities),
+        landscape_func = DYNAMICS_MODEL.landscape_func,
+        target_x=  env.target_location,
+        xlim=None,
+    )
+
+    video.save("../video_logs/episode2.mp4")
+
     fig, ax = plt.subplots(2,3,figsize = (10, 7))
     ax = ax.flatten()
     ax[0].plot(positions, label='positions')
@@ -92,16 +103,6 @@ def main():
     ax[4].set_title('fuel')
     
     plt.show()
-
-    video = MotionViewer(
-        positions = np.array(positions),
-        velocities= np.array(velocities),
-        landscape_func = DYNAMICS_MODEL.landscape_func,
-        target_x=  env.target_location,
-        xlim=None,
-    )
-
-    video.save("../video_logs/episode2.mp4")
 
 
 
