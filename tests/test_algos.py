@@ -12,6 +12,7 @@ vehicle = Vehicle(
     base_mass = 1.0,
     fuel_mass = 0.0,
     fuel_efficiency = 0.0,
+    fuel_burn_rate=0.0,
     finite_fuel = False
 )
 
