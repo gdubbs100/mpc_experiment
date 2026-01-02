@@ -19,31 +19,25 @@ class Vehicle:
     @property
     def mass(self):
         return self.base_mass + self.fuel_mass
-
-    def track_fuel_use(self, u: float, time_increment: float) -> float:
-        """
-        u: normalized control in [-1, 1]
-        returns: fuel burned
-        """
-        u = max(min(u, 1.0), -1.0)
-
-        fuel_burn = self.fuel_burn_rate * abs(u) * time_increment
-        fuel_burn = min(self.fuel_mass, fuel_burn)
-
-        self.fuel_mass -= fuel_burn
-
+    
     def generate_force(self, u: float, time_increment: float) -> float:
         """
         u: normalized control in [-1, 1]
         """
         if abs(u) > 1.0:
             raise ValueError(f"Control value must be within +/- 1. Actual value: {u}")
+        
+        raw_fuel_burn = abs(u) * self.fuel_burn_rate
+
+        # restrict amount of fuel to burn by available fuel
+        fuel_burn = min(raw_fuel_burn, self.fuel_mass / time_increment)
+
+        fuel_burned = fuel_burn * time_increment
 
         if self.finite_fuel:
-            self.track_fuel_use(u, time_increment)
+            self.fuel_mass -= fuel_burned
 
-        # Force is *entirely* determined by fuel physics
-        force = self.fuel_burn_rate * self.fuel_efficiency * u
+        force = self.fuel_efficiency * fuel_burn * np.sign(u)
 
         return force
     

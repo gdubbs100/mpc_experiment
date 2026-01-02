@@ -4,14 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from algo.benchmark_agents import RandomAgent
-from algo.mpc_agents import OracleMPCCEMAgent
+from algo.mpc_agents import OracleMPCCEMAgent, OracleRandomShootingAgent, OracleMPPIAgent
 
 from environment.dynamics_models import DynamicsModel
 from environment.simulation_environment import OneDSimulationEnv
 from environment.vehicle import Vehicle
 from environment.viewer import MotionViewer
 
-TARGET_LOCATION = 2.0
+TARGET_LOCATION = 5.0
 VEHICLE = Vehicle(
     base_mass = 1.0,
     fuel_mass = 0.2,
@@ -20,11 +20,9 @@ VEHICLE = Vehicle(
     finite_fuel=True
 )
 DYNAMICS_MODEL = DynamicsModel(
-    # initial_position=0.0,
-    # initial_velocity=0.0,
     resistance=0.1,
     gravity=9.81,
-    landscape_func=lambda x: -np.sin(x/2) - x/2 * np.cos(x-1),
+    landscape_func=lambda x: np.sin(3*x) - x * np.cos(x),
     time_increment = 0.05
 )
 
@@ -36,15 +34,32 @@ env = OneDSimulationEnv(
 )
 
 # agent = RandomAgent()
-agent = OracleMPCCEMAgent(
+# agent = OracleMPCCEMAgent(
+#     target_location=TARGET_LOCATION,
+#     dynamics_model=copy.deepcopy(DYNAMICS_MODEL),
+#     vehicle=copy.deepcopy(VEHICLE),
+#     num_lookahead_steps=20,
+#     num_rollouts = 500,
+#     cem_iters = 5,
+#     cem_cutoff = 0.95,
+#     initial_sampling_variance=1
+# )
+
+# agent = OracleRandomShootingAgent(
+#     target_location=TARGET_LOCATION,
+#     dynamics_model=copy.deepcopy(DYNAMICS_MODEL),
+#     vehicle=copy.deepcopy(VEHICLE),
+#     num_lookahead_steps=20,
+#     num_rollouts = 500,
+# )
+
+agent = OracleMPPIAgent(
     target_location=TARGET_LOCATION,
     dynamics_model=copy.deepcopy(DYNAMICS_MODEL),
     vehicle=copy.deepcopy(VEHICLE),
-    num_lookahead_steps=30,
+    num_lookahead_steps=20,
     num_rollouts = 500,
-    cem_iters = 15,
-    cem_cutoff = 0.95,
-    initial_sampling_variance=1
+    temperature=1.0
 )
 
 

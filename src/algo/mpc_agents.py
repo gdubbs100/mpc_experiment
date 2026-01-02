@@ -4,6 +4,174 @@ from typing import Callable
 from environment.dynamics_models import DynamicsModel
 from environment.vehicle import Vehicle
 
+class OracleRandomShootingAgent:
+
+    def __init__(
+            self,
+            target_location: float,
+            dynamics_model: DynamicsModel,
+            vehicle: Vehicle,
+            num_lookahead_steps: int,
+            num_rollouts: int
+    ):
+        self.target_location = target_location
+        self.dynamics_model = dynamics_model
+        self.vehicle = vehicle
+        self.num_lookahead_steps = num_lookahead_steps
+        self.num_rollouts = num_rollouts
+
+    def rollout(
+            self, 
+            initial_position: float, 
+            initial_velocity: float, 
+            remaining_fuel: float,
+            actions: np.ndarray[float]
+        ) -> np.ndarray:
+        rollout_reward = 0.0
+        position, velocity = initial_position, initial_velocity
+        self.vehicle.reset(fuel_mass = remaining_fuel)
+        for a in actions:
+            ## TODO: is there a better way to get time_increment?
+            applied_force = self.vehicle.generate_force(u=a, time_increment=self.dynamics_model.time_increment)
+            position, velocity = self.dynamics_model.step(
+                applied_force = applied_force, 
+                mass = self.vehicle.mass,
+                current_position = position,
+                current_velocity = velocity
+            )
+            next_reward = np.abs(position - self.target_location)
+            rollout_reward += -next_reward
+            
+        return rollout_reward
+    
+    def run_mpc_iter(self, initial_state, actions):
+
+        rewards = np.zeros(self.num_rollouts)
+        for i in range(self.num_rollouts):
+            rollout_reward = self.rollout(
+                initial_position = initial_state[0],
+                initial_velocity = initial_state[1],
+                remaining_fuel = initial_state[2],
+                actions = actions[i,:]
+            )
+            rewards[i] = rollout_reward
+        return rewards
+    
+    def random_shooting(self, initial_state):
+        actions = (
+                np.random.normal(
+                    loc=np.repeat(np.zeros(self.num_lookahead_steps), self.num_rollouts), 
+                    scale=np.repeat(np.ones(self.num_lookahead_steps), self.num_rollouts)
+                )
+            ).reshape(self.num_rollouts, self.num_lookahead_steps)
+        
+        u = np.tanh(actions) # tanh squashing
+        rewards = self.run_mpc_iter(
+            initial_state = initial_state, 
+            actions = u
+        )
+        best_trajectory = np.argmax(rewards)
+        # take first action of best trajectory
+        return u[best_trajectory, 0]
+    
+    def act(self, state):
+        u = self.random_shooting(initial_state=state)
+        return u
+
+class OracleMPPIAgent:
+    """
+    MPC using model path predictive integral (?) method
+    """
+
+    def __init__(
+            self, 
+            target_location: float, 
+            dynamics_model: DynamicsModel,
+            vehicle: Vehicle,
+            num_lookahead_steps: int, 
+            num_rollouts: int, 
+            temperature: float
+        ):
+
+        self.target_location = target_location
+        self.dynamics_model = dynamics_model
+        self.vehicle = vehicle
+        self.num_lookahead_steps = num_lookahead_steps
+        self.num_rollouts = num_rollouts
+        self.temperature = temperature
+        self.u_nominal = np.zeros((self.num_lookahead_steps))
+
+    def act(self, state):
+        u = self.run_mppi(initial_state=state)
+        return u
+    
+    def run_mppi(self, initial_state):
+        ## Do we run this through several iters?
+        noise = np.random.normal(
+            loc = 0.0, scale = 1.0, 
+            size = (self.num_rollouts, self.num_lookahead_steps)
+        )
+
+        actions = np.tanh(self.u_nominal + noise)
+        rewards = self.run_iter(
+            initial_state=initial_state,
+            actions = actions
+        )
+        weights = self.compute_mppi_weights(rewards)
+
+        u_new = self.u_nominal + np.sum(weights[:,None] * noise, axis = 0)
+        ## chatgpt recommends this to keep values within -1, +1 
+        ## is it necessary/ best way?
+        u_new = np.tanh(u_new).squeeze() 
+        u_shifted = np.roll(u_new, -1)
+        u_shifted[-1] = 0.0
+        self.u_nominal = u_shifted
+        # breakpoint()
+        return u_new[0]
+
+    def compute_mppi_weights(self, rewards):
+        worst_reward = rewards.min()
+        weights = np.exp(-(rewards - worst_reward) / self.temperature)
+        weights /= weights.sum() + 1.0e-6
+        return weights
+
+    def rollout(
+            self, 
+            initial_position: float, 
+            initial_velocity: float, 
+            remaining_fuel: float,
+            actions: np.ndarray[float]
+        ) -> np.ndarray:
+        rollout_reward = 0.0
+        position, velocity = initial_position, initial_velocity
+        self.vehicle.reset(fuel_mass = remaining_fuel)
+        for a in actions:
+            ## TODO: is there a better way to get time_increment?
+            applied_force = self.vehicle.generate_force(u=a, time_increment=self.dynamics_model.time_increment)
+            position, velocity = self.dynamics_model.step(
+                applied_force = applied_force, 
+                mass = self.vehicle.mass,
+                current_position = position,
+                current_velocity = velocity
+            )
+            next_reward = np.abs(position - self.target_location)
+            rollout_reward += -next_reward
+            
+        return rollout_reward
+    
+    def run_iter(self, initial_state, actions):
+
+        rewards = np.zeros(self.num_rollouts)
+        for i in range(self.num_rollouts):
+            rollout_reward = self.rollout(
+                initial_position = initial_state[0],
+                initial_velocity = initial_state[1],
+                remaining_fuel = initial_state[2],
+                actions = actions[i,:]
+            )
+            rewards[i] = rollout_reward
+        return rewards
+
 
 class OracleMPCCEMAgent:
     """
@@ -38,9 +206,9 @@ class OracleMPCCEMAgent:
     def act(self, state):
         mean, std = self.run_cem_mpc(initial_state=state)
         if self.deterministic_actions:
-            return mean
+            return np.tanh(mean)
         else:
-            return np.random.normal(loc=mean, scale=std)
+            return np.tanh(np.random.normal(loc=mean, scale=std))
 
     def select_elite_actions(self, 
                             actions: np.ndarray, 
