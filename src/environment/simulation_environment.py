@@ -4,6 +4,7 @@ import numpy as np
 from environment.dynamics_models import DynamicsModel
 from environment.vehicle import Vehicle
 from typing import Tuple, Optional
+from utils.reward_utils import calculate_reward
 
 class OneDSimulationEnv(gym.Env):
 
@@ -71,8 +72,11 @@ class OneDSimulationEnv(gym.Env):
 
         ## get reward
         distance_to_target = self.calculate_distance_to_target(position = self.position)
-        reward = -distance_to_target ## TODO: for now
-
+        reward = -calculate_reward(
+            position = self.position,
+            target = self.target_location,
+            control_value = action
+        )
         ## truncate after finite duration
         truncated = False
         self.duration += 1

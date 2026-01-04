@@ -1,8 +1,8 @@
 import numpy as np
-from typing import Callable
 
 from environment.dynamics_models import DynamicsModel
 from environment.vehicle import Vehicle
+from utils.reward_utils import calculate_reward
 
 class OracleMPCAgent:
 
@@ -39,8 +39,13 @@ class OracleMPCAgent:
                 current_position = position,
                 current_velocity = velocity
             )
-            next_reward = np.abs(position - self.target_location)
-            rollout_reward += -next_reward
+            # next_reward = np.abs(position - self.target_location)
+            # absolute_distance_tocalculate_distance_to_target
+            rollout_reward += -calculate_reward(
+                position = position,
+                target = self.target_location,
+                control_value = a
+            )
             
         return rollout_reward
     

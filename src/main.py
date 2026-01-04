@@ -4,7 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from algo.benchmark_agents import RandomAgent
-from algo.mpc_agents import OracleMPCCEMAgent, OracleRandomShootingAgent, OracleMPPIAgent
+from algo.mpc_agents import (
+    OracleCEMAgent, 
+    OracleRandomShootingAgent, 
+    OracleMPPIAgent
+)
 
 from environment.dynamics_models import DynamicsModel
 from environment.simulation_environment import OneDSimulationEnv
@@ -60,7 +64,7 @@ agent = OracleMPPIAgent(
     num_lookahead_steps=50,
     num_rollouts = 500,
     learning_iters=5,
-    temperature=0.1
+    temperature=1.0
 )
 
 

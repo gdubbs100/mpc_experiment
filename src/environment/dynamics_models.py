@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Callable, Tuple
-from .environment_utils import numerical_grad
+from utils.environment_utils import numerical_grad
 
 class DynamicsModel:
 
