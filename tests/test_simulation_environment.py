@@ -8,7 +8,7 @@ from testing_utils import check_approximate_equality, check_exact_equality
 # Vehicle for test
 vehicle = Vehicle(
     base_mass = 1.0,
-    fuel_mass = 0.0,
+    fuel_mass = 1.0,
     fuel_efficiency = 1.0,
     fuel_burn_rate = 1.0,
     finite_fuel = False
@@ -29,9 +29,10 @@ env = OneDSimulationEnv(
     )
 
 def test_environment_step():
-    acceleration = 1 - 1/np.sqrt(2)
+    acceleration = (-np.sqrt(2) + 1.0)/2.0
 
     obs, reward, _, _, _ = env.step(action = 1.0)
+    assert env.vehicle.mass == 2.0, f"vehicle mass is incorrect!"
 
     expected_position = env.initial_position + acceleration
     expected_velocity = env.initial_velocity + acceleration
