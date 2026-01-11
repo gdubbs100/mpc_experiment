@@ -104,6 +104,7 @@ class OneDSimulationEnv(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
 
         super().reset(seed=seed)
+        self.duration = 0
         self.position = self.initial_position
         self.velocity = self.initial_velocity
         self.vehicle.reset(fuel_mass = self.initial_fuel_mass)
