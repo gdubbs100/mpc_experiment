@@ -1,6 +1,5 @@
-import numpy as np
 from typing import Callable, Tuple
-from utils.environment_utils import numerical_grad
+from utils.environment_utils import numerical_grad, sqrt
 
 class DynamicsModel:
 
@@ -46,6 +45,7 @@ class DynamicsModel:
             current_position = current_position,
             mass = mass
         )
+
         return (force_from_gravity + applied_force - friction) / mass
     
     def calculate_force_from_gravity(self, current_position: float, mass: float) -> float:
@@ -53,7 +53,7 @@ class DynamicsModel:
             landscape_func=self.landscape_func,
             x = current_position
         )
-        return -mass * self.gravity * (s / np.sqrt(1 + s**2))
+        return -mass * self.gravity * (s / sqrt(1 + s**2))
 
     def step(
             self, 

@@ -1,4 +1,5 @@
-import numpy as np
+import torch
+from utils.environment_utils import sign
 
 class Vehicle:
 
@@ -35,9 +36,11 @@ class Vehicle:
         fuel_burned = fuel_burn * time_increment
 
         if self.finite_fuel:
+            if isinstance(fuel_burned, torch.Tensor):
+                fuel_burned = fuel_burned.detach()
             self.fuel_mass -= fuel_burned
 
-        force = self.fuel_efficiency * fuel_burn * np.sign(u)
+        force = self.fuel_efficiency * fuel_burn * sign(u)
 
         return force
     

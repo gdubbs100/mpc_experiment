@@ -8,7 +8,8 @@ from algo.benchmark_agents import RandomAgent
 from algo.mpc_agents import (
     OracleCEMAgent, 
     OracleRandomShootingAgent, 
-    OracleMPPIAgent
+    OracleMPPIAgent,
+    OracleGBAgent
 )
 from utils.logging_utils import (
     create_run_dir, 
