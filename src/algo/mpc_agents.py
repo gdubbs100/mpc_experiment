@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 
 from environment.dynamics_models import DynamicsModel
@@ -29,24 +30,29 @@ class OracleMPCAgent:
         ) -> np.ndarray:
         rollout_reward = 0.0
         position, velocity = initial_position, initial_velocity
+        
         self.vehicle.reset(fuel_mass = remaining_fuel)
+
         for a in actions:
             ## TODO: is there a better way to get time_increment?
-            applied_force = self.vehicle.generate_force(u=a, time_increment=self.dynamics_model.time_increment)
+            applied_force = self.vehicle.generate_force(
+                u=a, 
+                time_increment=self.dynamics_model.time_increment
+            )
+            
             position, velocity = self.dynamics_model.step(
                 applied_force = applied_force, 
                 mass = self.vehicle.mass,
                 current_position = position,
                 current_velocity = velocity
             )
-            # next_reward = np.abs(position - self.target_location)
-            # absolute_distance_tocalculate_distance_to_target
+
             rollout_reward += -calculate_reward(
                 position = position,
                 target = self.target_location,
                 control_value = a
             )
-            
+        
         return rollout_reward
     
     def run_mpc_iter(self, initial_state, actions):
@@ -61,6 +67,61 @@ class OracleMPCAgent:
             )
             rewards[i] = rollout_reward
         return rewards
+    
+class OracleGBAgent(OracleMPCAgent):
+        
+        def __init__(self, learning_iters: int, learning_rate: float, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.learning_iters = learning_iters
+            self.learning_rate = learning_rate
+            self.u_nominal = torch.normal(
+                mean = 0.0,
+                std = 1.0,
+                size = (self.num_rollouts, self.num_lookahead_steps)
+            )
+
+        def act(self, state):
+            u = self.gradient_based_mpc(initial_state=state)
+            return u
+        
+        def gradient_based_mpc(self, initial_state):
+            actions = self.u_nominal.clone().detach()
+            actions.requires_grad_(True)
+            assert actions.requires_grad, "actions does not have grad enabled!"
+            optimizer = torch.optim.SGD([actions], lr=self.learning_rate) # Adam often works better for MPC
+            initial_state = torch.tensor(initial_state, dtype=torch.float32, requires_grad=False)
+
+            for _ in range(self.learning_iters):
+                
+                optimizer.zero_grad()
+                u = torch.tanh(actions)
+                rewards = self.run_mpc_iter(initial_state, u)
+                ## rewards are negative, so we negate, idea is to minimize
+                loss = -torch.mean(rewards)
+                loss.backward()
+                optimizer.step()
+            
+            u_new = torch.tanh(actions[torch.argmax(rewards),0]).detach().numpy()
+            u_shifted = torch.roll(actions[torch.argmax(rewards),:], shifts=-1, dims=0).detach()
+            u_shifted[-1] = torch.normal(mean=0.0, std=1.0, size = (1,))
+            self.u_nominal = u_shifted[None,:]
+            return u_new
+        
+
+        def run_mpc_iter(self, initial_state, actions):
+
+            rewards = []
+            for i in range(self.num_rollouts):
+                rollout_reward = self.rollout(
+                    initial_position = initial_state[0],
+                    initial_velocity = initial_state[1],
+                    remaining_fuel = initial_state[2],
+                    actions = actions[i,:]
+                )
+                rewards.append(rollout_reward)
+
+            return torch.stack(rewards)
+
 
 class OracleRandomShootingAgent(OracleMPCAgent):
 

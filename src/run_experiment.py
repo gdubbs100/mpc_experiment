@@ -1,5 +1,6 @@
 import argparse
 import copy
+import torch
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,8 @@ import matplotlib.pyplot as plt
 from algo.mpc_agents import (
     OracleCEMAgent, 
     OracleRandomShootingAgent, 
-    OracleMPPIAgent
+    OracleMPPIAgent,
+    OracleGBAgent
 )
 from utils.logging_utils import (
     create_run_dir, 
@@ -22,6 +24,7 @@ from environment.vehicle import Vehicle
 from environment.viewer import MotionViewer
 
 ## set seed
+torch.manual_seed(42)
 np.random.seed(seed=42)
 
 ## Argparser
@@ -34,10 +37,16 @@ args = parser.parse_args()
 EXPERIMENT_ID = args.experiment_id
 NUM_RUNS = args.num_runs
 TARGET_LOCATION = 5.0
-LANDSCAPE_FUNC = lambda x: np.sin(3*x) - x * np.cos(x)
+def landscape_func(x):
+    if isinstance(x, torch.Tensor):
+        return torch.sin(3*x) - x * torch.cos(x)
+    else:
+        return np.sin(3*x) - x * np.cos(x)
+
+LANDSCAPE_FUNC = lambda x: landscape_func(x)
 NUM_LOOKAHEAD_STEPS = 50
-NUM_ROLLOUTS = 500
-LEARNING_ITERS = 5
+NUM_ROLLOUTS = 1
+LEARNING_ITERS = 50
 
 VEHICLE = Vehicle(
     base_mass = 1.0,
@@ -86,6 +95,15 @@ ALGOS = {
         num_rollouts = NUM_ROLLOUTS,
         learning_iters = LEARNING_ITERS,
         temperature=1.0
+    ),
+    "GB": OracleGBAgent(
+        target_location=TARGET_LOCATION,
+        dynamics_model=copy.deepcopy(DYNAMICS_MODEL),
+        vehicle=copy.deepcopy(VEHICLE),
+        num_lookahead_steps = NUM_LOOKAHEAD_STEPS,
+        num_rollouts = 1,
+        learning_iters = 50,
+        learning_rate=0.001
     )
 
 }
