@@ -4,7 +4,7 @@ import numpy as np
 from environment.dynamics_models import DynamicsModel
 from environment.vehicle import Vehicle
 from typing import Tuple, Optional
-from utils.reward_utils import calculate_reward
+from utils.reward_utils import calculate_reward, terminal_reward
 
 class OneDSimulationEnv(gym.Env):
 
@@ -82,18 +82,24 @@ class OneDSimulationEnv(gym.Env):
         self.duration += 1
         if self.duration >= self.max_duration:
             truncated = True
+            reward += -terminal_reward(
+                position = self.position,
+                velocity=self.velocity,
+                target = self.target_location,
+                control_value=action
+            )
 
         terminated = False
         info['success'] = 0
 
-        if (distance_to_target < self.distance_to_target_threshold) and (abs(self.velocity) < self.velocity_threshold):
-            if self.time_close_to_target >= self.target_time_close_to_target:
-                terminated = True
-                info['success'] = 1
-            else:
-                self.time_close_to_target += 1
-        else:
-            self.time_close_to_target = 0
+        # if (distance_to_target < self.distance_to_target_threshold) and (abs(self.velocity) < self.velocity_threshold):
+        #     if self.time_close_to_target >= self.target_time_close_to_target:
+        #         terminated = True
+        #         info['success'] = 1
+        #     else:
+        #         self.time_close_to_target += 1
+        # else:
+        #     self.time_close_to_target = 0
             
         
         info['distance_to_target'] = distance_to_target

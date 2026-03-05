@@ -3,7 +3,7 @@ import numpy as np
 
 from environment.dynamics_models import DynamicsModel
 from environment.vehicle import Vehicle
-from utils.reward_utils import calculate_reward
+from utils.reward_utils import calculate_reward, terminal_reward
 
 class OracleMPCAgent:
 
@@ -13,13 +13,15 @@ class OracleMPCAgent:
             dynamics_model: DynamicsModel,
             vehicle: Vehicle,
             num_lookahead_steps: int,
-            num_rollouts: int
+            num_rollouts: int,
+            use_terminal_reward: bool
     ):
         self.target_location = target_location
         self.dynamics_model = dynamics_model
         self.vehicle = vehicle
         self.num_lookahead_steps = num_lookahead_steps
         self.num_rollouts = num_rollouts
+        self.use_terminal_reward = use_terminal_reward
 
     def rollout(
             self, 
@@ -52,7 +54,15 @@ class OracleMPCAgent:
                 target = self.target_location,
                 control_value = a
             )
-        
+
+        ## terminal reward is last reward again  + velocity penalty
+        if self.use_terminal_reward:
+            rollout_reward += -terminal_reward(
+                position = position,
+                velocity = velocity,
+                target = self.target_location,
+                control_value = a
+            )
         return rollout_reward
     
     def run_mpc_iter(self, initial_state, actions):

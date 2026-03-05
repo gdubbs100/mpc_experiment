@@ -31,6 +31,8 @@ np.random.seed(seed=42)
 parser = argparse.ArgumentParser()
 parser.add_argument('--experiment_id', type=str, help="name the experiment", required=True)
 parser.add_argument('--num_runs', type = int, default=5, help="Number of runs for each algo to do", required=False)
+parser.add_argument('--num_lookahead_steps', type = int, default=50, help="number of lookahead steps for MPC")
+parser.add_argument('--use_terminal_reward', type = bool, default = True, help = "use a terminal reward")
 args = parser.parse_args()
 
 ## experiment values
@@ -44,9 +46,10 @@ def landscape_func(x):
         return np.sin(3*x) - x * np.cos(x)
 
 LANDSCAPE_FUNC = lambda x: landscape_func(x)
-NUM_LOOKAHEAD_STEPS = 50
-NUM_ROLLOUTS = 1
-LEARNING_ITERS = 50
+NUM_LOOKAHEAD_STEPS = args.num_lookahead_steps
+NUM_ROLLOUTS = 500
+LEARNING_ITERS = 5
+USE_TERMINAL_REWARD = args.use_terminal_reward
 
 VEHICLE = Vehicle(
     base_mass = 1.0,
@@ -76,6 +79,7 @@ ALGOS = {
         vehicle=copy.deepcopy(VEHICLE),
         num_lookahead_steps=NUM_LOOKAHEAD_STEPS,
         num_rollouts = NUM_ROLLOUTS,
+        use_terminal_reward = USE_TERMINAL_REWARD,
         learning_iters = LEARNING_ITERS,
         cem_cutoff = 0.95,
         initial_sampling_variance=1
@@ -86,13 +90,15 @@ ALGOS = {
         vehicle=copy.deepcopy(VEHICLE),
         num_lookahead_steps=NUM_LOOKAHEAD_STEPS,
         num_rollouts = NUM_ROLLOUTS,
+        use_terminal_reward = USE_TERMINAL_REWARD,
     ),
     "MPPI": OracleMPPIAgent(
         target_location=TARGET_LOCATION,
         dynamics_model=copy.deepcopy(DYNAMICS_MODEL),
         vehicle=copy.deepcopy(VEHICLE),
-        num_lookahead_steps = NUM_LOOKAHEAD_STEPS,
+        num_lookahead_steps=NUM_LOOKAHEAD_STEPS,
         num_rollouts = NUM_ROLLOUTS,
+        use_terminal_reward = USE_TERMINAL_REWARD,
         learning_iters = LEARNING_ITERS,
         temperature=1.0
     ),
@@ -100,10 +106,11 @@ ALGOS = {
         target_location=TARGET_LOCATION,
         dynamics_model=copy.deepcopy(DYNAMICS_MODEL),
         vehicle=copy.deepcopy(VEHICLE),
-        num_lookahead_steps = NUM_LOOKAHEAD_STEPS,
+        num_lookahead_steps=NUM_LOOKAHEAD_STEPS,
+        use_terminal_reward = USE_TERMINAL_REWARD,
         num_rollouts = 1,
         learning_iters = 50,
-        learning_rate=0.001
+        learning_rate=0.003
     )
 
 }
